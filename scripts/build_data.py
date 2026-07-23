@@ -1,5 +1,6 @@
 import datetime as dt
 import json
+import os
 from collections import defaultdict
 from pathlib import Path
 
@@ -7,7 +8,7 @@ import openpyxl
 
 
 ROOT = Path(__file__).resolve().parents[2]
-WORKBOOK_PATH = ROOT / "source-dashboard-latest.xlsx"
+WORKBOOK_PATH = Path(os.environ.get("DASHBOARD_WORKBOOK", ROOT / "source-dashboard-latest.xlsx"))
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "public" / "data" / "dashboard.json"
 
 
@@ -28,15 +29,32 @@ def date_key(value):
     return None
 
 
+def header_index(row, *labels):
+    normalized = [str(value).replace(" ", "").lower() if value is not None else "" for value in row]
+    for label in labels:
+        target = label.replace(" ", "").lower()
+        for index, value in enumerate(normalized):
+            if value == target:
+                return index
+    raise ValueError(f"Missing required column: {labels}")
+
+
 workbook = openpyxl.load_workbook(WORKBOOK_PATH, read_only=True, data_only=True)
 daily = defaultdict(lambda: {"shopee": 0.0, "tiktok": 0.0, "lazada": 0.0, "shopeeSubsidy": 0.0, "tiktokSubsidy": 0.0})
 
-for row in workbook["DMS shopee店铺实收GMV"].iter_rows(min_row=2, values_only=True):
-    day = date_key(row[1] if len(row) > 1 else None)
+shopee_sheet = workbook["DMS shopee店铺实收GMV"]
+shopee_rows = shopee_sheet.iter_rows(values_only=True)
+shopee_header = next(shopee_rows)
+shopee_date_col = header_index(shopee_header, "Order Date", "日期")
+shopee_gmv_col = header_index(shopee_header, "实收GMV（人民币）", "实收GMV(人民币）", "实收GMV(人民币)")
+shopee_subsidy_col = header_index(shopee_header, "平台补贴")
+
+for row in shopee_rows:
+    day = date_key(row[shopee_date_col] if len(row) > shopee_date_col else None)
     if not day:
         continue
-    daily[day]["shopee"] += number(row[24] if len(row) > 24 else 0)
-    daily[day]["shopeeSubsidy"] += number(row[25] if len(row) > 25 else 0)
+    daily[day]["shopee"] += number(row[shopee_gmv_col] if len(row) > shopee_gmv_col else 0)
+    daily[day]["shopeeSubsidy"] += number(row[shopee_subsidy_col] if len(row) > shopee_subsidy_col else 0)
 
 for row in workbook["DMS TIKTOK 店铺实收gmv"].iter_rows(min_row=2, values_only=True):
     day = date_key(row[8] if len(row) > 8 else None)
