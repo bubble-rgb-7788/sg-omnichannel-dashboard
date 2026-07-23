@@ -33,6 +33,11 @@ const shelfTotal = sum(monthRows, 'shelf');
 const tiktokTotal = sum(monthRows, 'tiktok');
 const targetProgress = totalTarget ? currentTotal / totalTarget : 0;
 const timeProgress = elapsedRatio;
+const channelMom = (key) => {
+  const current = sum(monthRows, key);
+  const previous = sum(previousRows, key);
+  return previous ? current / previous - 1 : null;
+};
 
 document.querySelector('#app').innerHTML = `
   <header class="topbar">
@@ -80,6 +85,11 @@ document.querySelector('#app').innerHTML = `
       <article class="panel"><div class="panel-head"><div><span>渠道销售结构</span><small>本月累计贡献</small></div></div><div id="share" class="chart"></div><div class="share-caption"><strong>${percent(currentTotal ? shelfTotal / currentTotal : 0)}</strong><span>货架销售占比</span></div></article>
     </section>
 
+    <section class="comparison-grid">
+      <article class="panel"><div class="panel-head"><div><span>TikTok 日 GMV 与补贴趋势</span><small>本月每日 vs 上月同期 · 累计 GMV 环比 ${channelMom('tiktok') == null ? '暂无可比数据' : percent(channelMom('tiktok'))}</small></div><div class="legend-note">单位：人民币</div></div><div id="tiktokComparison" class="chart comparison-chart"></div></article>
+      <article class="panel"><div class="panel-head"><div><span>Shopee 日 GMV 与补贴趋势</span><small>本月每日 vs 上月同期 · 累计 GMV 环比 ${channelMom('shopee') == null ? '暂无可比数据' : percent(channelMom('shopee'))}</small></div><div class="legend-note">单位：人民币</div></div><div id="shopeeComparison" class="chart comparison-chart"></div></article>
+    </section>
+
     <section class="bottom-grid">
       <article class="panel"><div class="panel-head"><div><span>经营进度</span><small>目标进度与时间进度对照</small></div></div><div class="goal-list">
         <div><label>全渠道目标</label><b>${percent(targetProgress)}</b><div><i style="width:${Math.min(targetProgress * 100, 100)}%"></i></div></div>
@@ -121,4 +131,30 @@ share.setOption({
   ] }],
 });
 
-window.addEventListener('resize', () => { trend.resize(); share.resize(); });
+const comparisonOption = (channelName, salesKey, subsidyKey, color) => {
+  const previousByDay = new Map(previousRows.map(row => [Number(row.date.slice(8, 10)), row]));
+  const days = monthRows.map(row => Number(row.date.slice(8, 10)));
+  return {
+    tooltip: { trigger: 'axis', valueFormatter: value => money.format(value || 0) },
+    legend: { top: 0, left: 0, itemWidth: 12, itemHeight: 8, textStyle: { color: '#69708a' } },
+    grid: { left: 54, right: 54, top: 54, bottom: 28 },
+    xAxis: { type: 'category', data: days.map(day => `${day}日`), axisLine: { lineStyle: { color: '#dce1ef' } }, axisLabel: { color: '#8a91aa', interval: days.length > 18 ? 1 : 0 } },
+    yAxis: [
+      { type: 'value', name: 'GMV', splitLine: { lineStyle: { color: '#edf0f7' } }, axisLabel: { color: '#8a91aa', formatter: value => `${Math.round(value / 1000)}k` } },
+      { type: 'value', name: '补贴', splitLine: { show: false }, axisLabel: { color: '#8a91aa', formatter: value => `${Math.round(value / 1000)}k` } },
+    ],
+    series: [
+      { name: `本月 ${channelName} GMV`, type: 'bar', data: monthRows.map(row => row[salesKey] || 0), itemStyle: { color }, barMaxWidth: 15 },
+      { name: `上月同期 GMV`, type: 'bar', data: days.map(day => previousByDay.get(day)?.[salesKey] || 0), itemStyle: { color, opacity: .28 }, barMaxWidth: 15 },
+      { name: '本月补贴', type: 'line', yAxisIndex: 1, data: monthRows.map(row => row[subsidyKey] || 0), smooth: true, symbolSize: 5, lineStyle: { width: 3, color: '#e94d83' }, itemStyle: { color: '#e94d83' } },
+      { name: '上月同期补贴', type: 'line', yAxisIndex: 1, data: days.map(day => previousByDay.get(day)?.[subsidyKey] || 0), smooth: true, symbol: 'none', lineStyle: { width: 2, type: 'dashed', color: '#9aa0b4' }, itemStyle: { color: '#9aa0b4' } },
+    ],
+  };
+};
+
+const tiktokComparison = echarts.init(document.querySelector('#tiktokComparison'));
+tiktokComparison.setOption(comparisonOption('TikTok', 'tiktok', 'tiktokSubsidy', '#7047eb'));
+const shopeeComparison = echarts.init(document.querySelector('#shopeeComparison'));
+shopeeComparison.setOption(comparisonOption('Shopee', 'shopee', 'shopeeSubsidy', '#15a6a6'));
+
+window.addEventListener('resize', () => { trend.resize(); share.resize(); tiktokComparison.resize(); shopeeComparison.resize(); });
