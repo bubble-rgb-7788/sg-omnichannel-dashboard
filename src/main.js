@@ -86,8 +86,8 @@ document.querySelector('#app').innerHTML = `
     </section>
 
     <section class="comparison-grid">
-      <article class="panel"><div class="panel-head"><div><span>TikTok 日 GMV 与补贴趋势</span><small>本月每日 vs 上月同期 · 累计 GMV 环比 ${channelMom('tiktok') == null ? '暂无可比数据' : percent(channelMom('tiktok'))}</small></div><div class="legend-note">单位：人民币</div></div><div id="tiktokComparison" class="chart comparison-chart"></div></article>
-      <article class="panel"><div class="panel-head"><div><span>Shopee 日 GMV 与补贴趋势</span><small>本月每日 vs 上月同期 · 累计 GMV 环比 ${channelMom('shopee') == null ? '暂无可比数据' : percent(channelMom('shopee'))}</small></div><div class="legend-note">单位：人民币</div></div><div id="shopeeComparison" class="chart comparison-chart"></div></article>
+      <article class="panel"><div class="panel-head"><div><span>TikTok 日 GMV 与补贴趋势</span><small>累计 GMV 环比 ${channelMom('tiktok') == null ? '暂无可比数据' : percent(channelMom('tiktok'))} · 上月同期补贴暂无同口径数据</small></div><div class="legend-note">单位：人民币</div></div><div id="tiktokComparison" class="chart comparison-chart"></div></article>
+      <article class="panel"><div class="panel-head"><div><span>Shopee 日 GMV 与补贴趋势</span><small>累计 GMV 环比 ${channelMom('shopee') == null ? '暂无可比数据' : percent(channelMom('shopee'))} · 本月补贴 ${money.format(sum(monthRows, 'shopeeSubsidy'))} · 上月同期 ${money.format(sum(previousRows, 'shopeeSubsidy'))}</small></div><div class="legend-note">单位：人民币</div></div><div id="shopeeComparison" class="chart comparison-chart"></div></article>
     </section>
 
     <section class="bottom-grid">
@@ -134,6 +134,7 @@ share.setOption({
 const comparisonOption = (channelName, salesKey, subsidyKey, color) => {
   const previousByDay = new Map(previousRows.map(row => [Number(row.date.slice(8, 10)), row]));
   const days = monthRows.map(row => Number(row.date.slice(8, 10)));
+  const hasPreviousSubsidy = sum(previousRows, subsidyKey) > 0;
   return {
     tooltip: { trigger: 'axis', valueFormatter: value => money.format(value || 0) },
     legend: { top: 0, left: 0, itemWidth: 12, itemHeight: 8, textStyle: { color: '#69708a' } },
@@ -147,7 +148,7 @@ const comparisonOption = (channelName, salesKey, subsidyKey, color) => {
       { name: `本月 ${channelName} GMV`, type: 'bar', data: monthRows.map(row => row[salesKey] || 0), itemStyle: { color }, barMaxWidth: 15 },
       { name: `上月同期 GMV`, type: 'bar', data: days.map(day => previousByDay.get(day)?.[salesKey] || 0), itemStyle: { color, opacity: .28 }, barMaxWidth: 15 },
       { name: '本月补贴', type: 'line', yAxisIndex: 1, data: monthRows.map(row => row[subsidyKey] || 0), smooth: true, symbolSize: 5, lineStyle: { width: 3, color: '#e94d83' }, itemStyle: { color: '#e94d83' } },
-      { name: '上月同期补贴', type: 'line', yAxisIndex: 1, data: days.map(day => previousByDay.get(day)?.[subsidyKey] || 0), smooth: true, symbol: 'none', lineStyle: { width: 2, type: 'dashed', color: '#9aa0b4' }, itemStyle: { color: '#9aa0b4' } },
+      { name: '上月同期补贴', type: 'line', yAxisIndex: 1, data: days.map(day => hasPreviousSubsidy ? (previousByDay.get(day)?.[subsidyKey] || 0) : null), smooth: true, symbol: 'none', lineStyle: { width: 2, type: 'dashed', color: '#9aa0b4' }, itemStyle: { color: '#9aa0b4' } },
     ],
   };
 };
