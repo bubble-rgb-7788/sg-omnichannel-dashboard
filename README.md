@@ -24,3 +24,13 @@ npm run dev
 npm run build
 npx wrangler deploy
 ```
+## 登录保护
+
+看板通过 Cloudflare Pages Functions 的 HTTP Basic Auth 保护，未登录用户无法访问页面或 `data/dashboard.json`。
+
+在 Cloudflare Pages 项目中进入 **Settings → Variables and Secrets → Add**，添加生产环境变量：
+
+- `DASHBOARD_USER`：自定义登录用户名
+- `DASHBOARD_PASSWORD`：自定义登录密码（选择加密 Secret）
+
+保存后重新部署。浏览器打开看板时会弹出登录框；不要把密码提交到 GitHub。
