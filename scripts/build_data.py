@@ -7,7 +7,7 @@ from pathlib import Path
 import openpyxl
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 WORKBOOK_PATH = Path(os.environ.get("DASHBOARD_WORKBOOK", ROOT / "source-dashboard-latest.xlsx"))
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "public" / "data" / "dashboard.json"
 
