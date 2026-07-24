@@ -2,8 +2,8 @@ name: Sync dashboard data
 
 on:
   schedule:
-    # 02:00 UTC is 10:00 in Asia/Shanghai.
-    - cron: "0 2 * * *"
+    # 06:00 UTC is 14:00 in Asia/Shanghai.
+    - cron: "0 6 * * *"
   workflow_dispatch:
 
 permissions:
